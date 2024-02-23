@@ -4,13 +4,19 @@
 
 ## Setup
 
-1. **Create a Conda environment:**
+
+1. **Cloning the repository:**
+
+   ```bash
+   git clone https://github.com/pabloiyu/Masters-Project.git
+
+2. **Create a Conda environment:**
 
    ```bash
    conda create --name my-project-env python=3.9  
    conda activate my-project-env
 
-2. **Install dependencies:**
+3. **Install dependencies:**
 
    ```bash
    pip install -r requirements.txt 
