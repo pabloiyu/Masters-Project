@@ -26,7 +26,7 @@
 In order to run any file, it is sufficient to simply type the following into terminal:
 
    ```bash
-      python [name_of_file].py
+      python name_of_file.py
    ```
 
 Within each file, there are a set of hyperparameters that can be modified to achieve the desired result. 
@@ -60,3 +60,7 @@ NOTE: To run these files, it is recommended to have a GPU as they will run signi
 * **nconvergence_NTK.py**
 
    * Tries to computaionally validate Theorem 2.1 of arXiv: 1902.06720.
+ 
+* **evolution_NTK.py**
+
+   * In progress. Tries to validate Figure 10 of arXiv: 1909.11304.
