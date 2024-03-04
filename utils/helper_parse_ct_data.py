@@ -22,3 +22,12 @@ def parse_ct_data(path_to_ct_data):
     X_test = X_test[:, idx_train]
     
     return X_train, X_val, X_test, y_train, y_val, y_test
+
+def parse_ct_data_scaled(path_to_ct_data):
+    X_train, X_val, X_test, y_train, y_val, y_test = parse_ct_data(path_to_ct_data)
+    
+    X_train = X_train / np.linalg.norm(X_train, axis=1, keepdims=True)
+    X_val = X_val / np.linalg.norm(X_val, axis=1, keepdims=True)
+    X_test = X_test / np.linalg.norm(X_test, axis=1, keepdims=True)
+    
+    return X_train, X_val, X_test, y_train, y_val, y_test

@@ -4,10 +4,11 @@ import torch.nn.functional as F
 import numpy as np
 import time
 
-num_layers = 2
-use_identity_activation = False
 class NeuralNetwork(nn.Module):
-    def __init__(self, num_inputs, width_hidden_layer, num_layers=num_layers):
+    """
+    Defines a simple neural network with a given number of layers and neurons per layer.
+    """
+    def __init__(self, num_inputs, width_hidden_layer, num_layers=2, use_identity_activation=False):
         super().__init__()
             
         layers = []
@@ -29,14 +30,12 @@ class NeuralNetwork(nn.Module):
     def forward(self, x):
         logits = self.linear_tanh_stack(x)
         return logits
-    
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-Cw = 2
-Cb = 0
-
-def initiate_model(num_inputs, width_hidden_layer):
-    model = NeuralNetwork(num_inputs, width_hidden_layer).to(device)
+def initiate_model(num_inputs, width_hidden_layer, num_layers, Cw=1, use_identity_activation=False, device='cpu'):
+    """
+    Initializes a neural network model with the given hyperparameters and weights and biases drawn from a normal distribution.
+    """
+    model = NeuralNetwork(num_inputs, width_hidden_layer, num_layers, use_identity_activation).to(device)
 
     for layer_num,layer in enumerate(model.linear_tanh_stack):
         if isinstance(layer, nn.Linear):
@@ -51,7 +50,10 @@ def initiate_model(num_inputs, width_hidden_layer):
     return model
 
 
-def get_lambda_matrix_diagonal(lambda_w_inputs, lambda_w_hidden_layer, lambda_b, num_inputs, width_hidden_layer):
+def get_lambda_matrix_diagonal(lambda_w_inputs, lambda_w_hidden_layer, lambda_b, num_inputs, width_hidden_layer, num_layers):
+    """
+    Calculates the diagonal row of the learning rate tensor. Each weight and each bias has its own scaling factor.
+    """
     lambda_matrix_diagonal = [lambda_w_inputs]*num_inputs*width_hidden_layer + [lambda_b]*width_hidden_layer
     
     for _ in range(num_layers-2):
@@ -65,6 +67,9 @@ def get_lambda_matrix_diagonal(lambda_w_inputs, lambda_w_hidden_layer, lambda_b,
     return lambda_matrix_diagonal, num_params
 
 def obtain_H(model, X, lambda_matrix_diagonal, num_data_points, num_params):
+    """
+    Calculates the Neural Tangent Kernel of a given model with respect to the input data X.
+    """
     # Initialize a 2D array to store the gradients for all data points
     all_grads = torch.zeros((num_data_points, num_params))
     
@@ -95,6 +100,10 @@ def obtain_H(model, X, lambda_matrix_diagonal, num_data_points, num_params):
     
 
 def obtain_H_grad(model, X, lambda_matrix_diagonal, num_data_points, num_params):
+    """
+    Calculates the Neural Tangent Kernel of a given model with respect to the input data X.
+    This version explicitly uses the autograd.grad function to compute the gradients.
+    """
     params = list(model.parameters())
     all_grads = torch.zeros((num_data_points, num_params))
     
@@ -154,11 +163,13 @@ def obtain_H_jac(model, X, lambda_matrix_diagonal, num_data_points, num_params) 
 
     return H
 
-
 def mse_H_matrices(H1,H2):
     return np.mean((H2-H1)**2)
 
 def train_model_one_step(model, X, Y, epsilon, lambda_w_inputs, lambda_w_hidden_layer, lambda_b):
+    """
+    Performs a single gradient descent step on a batch of data.
+    """
     output = model(X)
     loss = F.mse_loss(output.squeeze(), Y)
     
@@ -193,14 +204,14 @@ def train_model_one_step(model, X, Y, epsilon, lambda_w_inputs, lambda_w_hidden_
 
 
 # I want mean value of ith neuron over the whole last layer.
-def obtain_neuron_activation_all_layers_one_input(num_inputs, width_hidden_layer, num_layers, x):
+def obtain_neuron_activation_all_layers_one_input_OLD(num_inputs, width_hidden_layer, num_layers, x, Cw=1, use_identity_activation=False, device='cpu'):
     features = {}
     def get_features(name):
         def hook(model, input, output):
             features[name] = output.detach()
         return hook
 
-    model = NeuralNetwork(num_inputs, width_hidden_layer, num_layers).to(device)
+    model = NeuralNetwork(num_inputs, width_hidden_layer, num_layers, use_identity_activation).to(device)
     
     for layer_num,layer in enumerate(model.linear_tanh_stack):
         if isinstance(layer, nn.Linear):
@@ -223,15 +234,49 @@ def obtain_neuron_activation_all_layers_one_input(num_inputs, width_hidden_layer
         
     return list_ith_activation_different_layers
 
+def obtain_neuron_activation_all_layers_one_input(num_inputs, width_hidden_layer, num_layers, x, Cw=1, use_identity_activation=False, device='cpu'):
+    """
+    Performs a forward pass with a given input x. It then extracts the intermediate and output activations
+    of the model.
+    """
+    features = {}
+    def get_features(name):
+        def hook(model, input, output):
+            features[name] = output.detach()
+        return hook
+
+    model = NeuralNetwork(num_inputs, width_hidden_layer, num_layers, use_identity_activation).to(device)
+    
+    for layer_num,layer in enumerate(model.linear_tanh_stack):
+        if isinstance(layer, nn.Linear):
+            layer_weight = layer.weight.data
+            num_input_neurons = layer_weight.shape[1]
+            num_output_neurons = layer_weight.shape[0]
+
+            variance = Cw / (num_input_neurons)
+            nn.init.normal_(layer.weight, mean=0, std=np.sqrt(variance))
+            nn.init.zeros_(layer.bias)
+            
+            layer.register_forward_hook(get_features(f"{layer_num}"))
+    
+    model(x)
+    
+    average_ith_activation_different_layers = np.zeros(num_layers)
+    for m,list_ith_activation in enumerate(features.values()):
+        average_list_ith_activation = list_ith_activation.cpu().numpy()[0] # np.array(list_ith_activation)
+        average_ith_activation_different_layers[m] = average_list_ith_activation
+        
+    return average_ith_activation_different_layers
+
 # I want mean value of ith neuron over the whole last layer.
-def obtain_neuron_activation_all_layers_two_inputs(num_inputs, width_hidden_layer, x1, x2):
+def obtain_neuron_activation_all_layers_two_inputs(num_inputs, width_hidden_layer, x1, x2, num_layers, Cw=1, use_identity_activation=False, device='cpu'):
     features = {}
     def get_features(name):
         def hook(model, input, output):
             features[name] = output.detach()
         return hook
     
-    model = NeuralNetwork(num_inputs, width_hidden_layer).to(device)
+    model = NeuralNetwork(num_inputs, width_hidden_layer, num_layers, use_identity_activation).to(device)
     
     for layer_num,layer in enumerate(model.linear_tanh_stack):
         if isinstance(layer, nn.Linear):

@@ -29,21 +29,26 @@ file_path = os.path.join(script_dir, path_to_ct_data)
 # Obtain data
 X_train, X_val, X_test, y_train, y_val, y_test = parse_ct_data(file_path)
 
-
 ######################### Hyperparameters #########################
-num_data_points = 2
-width_hidden_layer = 100
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+use_identity_activation = False
+Cw = 2
+Cb = 0
 
-num_networks = int(1E4)
-assert num_layers==2
+width_hidden_layer = 100
+num_networks_ensemble = int(1E4)
 ###################################################################
 
+# The code is intended for obtaining observable K for two input data points and for a network
+# with a single hidden layer. 
+num_data_points = 2
+num_layers = 2
 
 X_reduced = X_train[:num_data_points]
 num_inputs = X_train.shape[1]
 
 def main(): 
-    array_phi_x1 = np.zeros((num_networks*width_hidden_layer, num_layers))
+    array_phi_x1 = np.zeros((num_networks_ensemble*width_hidden_layer, num_layers))
     array_phi_x2 = np.zeros_like(array_phi_x1)
     
     x1 = torch.tensor(X_reduced[0], dtype=torch.float).to(device)
@@ -52,11 +57,11 @@ def main():
     print("\nObtaining results for K for a network with 1 hidden layer.")
     print("\nObtaining computational results...\n")
     
-    for n in tqdm(range(num_networks)):
-        array_phi_x1[n*width_hidden_layer:(n+1)*width_hidden_layer], array_phi_x2[n*width_hidden_layer:(n+1)*width_hidden_layer] = obtain_neuron_activation_all_layers_two_inputs(num_inputs, width_hidden_layer, x1, x2) 
+    for n in tqdm(range(num_networks_ensemble)):
+        array_phi_x1[n*width_hidden_layer:(n+1)*width_hidden_layer], array_phi_x2[n*width_hidden_layer:(n+1)*width_hidden_layer] = obtain_neuron_activation_all_layers_two_inputs(num_inputs, width_hidden_layer, x1, x2, num_layers, Cw, use_identity_activation, device)
     
     # Now we calculate array_phi for the hidden layer
-    array_phi_2d_hiddenlayer = np.zeros((num_networks*width_hidden_layer, num_data_points, num_data_points))
+    array_phi_2d_hiddenlayer = np.zeros((num_networks_ensemble*width_hidden_layer, num_data_points, num_data_points))
     array_phi_2d_hiddenlayer[:,0,0] = array_phi_x1[:,0] ** 2
     array_phi_2d_hiddenlayer[:,1,1] = array_phi_x2[:,0] ** 2
     array_phi_2d_hiddenlayer[:,0,1] = array_phi_x1[:,0] * array_phi_x2[:,0]
@@ -70,10 +75,10 @@ def main():
     array_phi_2d_output[:,1,0] = array_phi_x2[:,1] * array_phi_x1[:,1]
     
     k_l_numerical_hiddenlayer = np.mean(array_phi_2d_hiddenlayer, axis=0)
-    std_k_l_numerical_hiddenlayer = np.sqrt(np.var(array_phi_2d_hiddenlayer, axis=0)) / np.sqrt(num_networks*width_hidden_layer)
+    std_k_l_numerical_hiddenlayer = np.sqrt(np.var(array_phi_2d_hiddenlayer, axis=0)) / np.sqrt(num_networks_ensemble*width_hidden_layer)
     
     k_l_numerical_output = np.mean(array_phi_2d_output, axis=0)
-    std_k_l_numerical_output = np.sqrt(np.var(array_phi_2d_output, axis=0)) / np.sqrt(num_networks)
+    std_k_l_numerical_output = np.sqrt(np.var(array_phi_2d_output, axis=0)) / np.sqrt(num_networks_ensemble)
     
     k_l_numerical = np.zeros((num_layers, num_data_points, num_data_points))
     k_l_numerical[0] = k_l_numerical_hiddenlayer
@@ -89,12 +94,12 @@ def main():
     print("\n K at Output Layer \n", k_l_numerical[1], "\n\nStandard Error\n", std_k_l_numerical[1], "\n\n")
     
     
-    
     # ############################ Theoretical ############################
     
     # In the 1D case, we calculate same thing but taking average
     k0_1 = Cb + Cw/num_inputs * np.einsum('im,km -> ik', X_reduced, X_reduced)
-
+    deriv_handler = DerivativesActivationFunction(use_identity_activation)
+    
     array_k0 = np.zeros((num_layers, num_data_points, num_data_points))
     array_k0[0] = k0_1
 
@@ -104,7 +109,7 @@ def main():
         for i in range(num_data_points):
             for j in range(num_data_points):
                 # Let's first calculate k0 for the lth layer, given the l-1 layer values
-                array_k0[lp1-1,i,j] = Cb + Cw * expectation_gaussian_measure_ndim(f, f, i, j, k0_l)
+                array_k0[lp1-1,i,j] = Cb + Cw * expectation_gaussian_measure_ndim(deriv_handler.f, deriv_handler.f, i, j, k0_l)
 
     print("####################### Theoretical Results #######################", "\n")
     print("\n K at Hidden Layer \n", array_k0[0])
