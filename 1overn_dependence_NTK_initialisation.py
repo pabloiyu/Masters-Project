@@ -41,13 +41,15 @@ num_networks_ensemble = int(1E2)
 num_layers = 2
 ###################################################################
 
-#  Scale learning rate tensor appropriately
-lambda_w_inputs = 1 / num_inputs if scale_learning_rate_tensor else 1
-lambda_b = 1
 
-reciprocal_width = 1 / np.array(list_width_hidden_layer)
 
 def main():
+    #  Scale learning rate tensor appropriately
+    lambda_w_inputs = 1 / num_inputs if scale_learning_rate_tensor else 1
+    lambda_b = 1
+
+    reciprocal_width = 1 / np.array(list_width_hidden_layer)
+
     X = torch.from_numpy(np.random.rand(num_data_points, num_inputs)).type(torch.FloatTensor).to(device)
     
     # We only store the NTK at the singular output neuron. For each network in the ensemble, and for each width,
@@ -112,7 +114,11 @@ def main():
             axs[i,j].set_ylabel(f'Neural Tangent Kernel')
             axs[i,j].set_title(f'Element ({i},{j})')
             
-    fig.savefig(f"Data/1overn_dependence_NTK_initialisation", dpi=300, bbox_inches='tight')
+    fig_path = "Data/1overn_dependence_NTK_initialisation.png"  
+
+    # Create the directory if it doesn't exist
+    os.makedirs(os.path.dirname(fig_path), exist_ok=True)  
+    fig.savefig(fig_path, dpi=300, bbox_inches='tight')
     plt.show()
                 
 

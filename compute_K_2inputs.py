@@ -114,8 +114,6 @@ def main():
     print("####################### Theoretical Results #######################", "\n")
     print("\n K at Hidden Layer \n", array_k0[0])
     print("\n K at Output Layer \n", array_k0[1], "\n")
-            
-    
     
 if __name__ == "__main__":
     main()

@@ -34,9 +34,9 @@ num_networks_ensemble = int(1E3)
 num_layers = 3
 ###################################################################
 
-reciprocal_width = 1 / np.array(list_width_hidden_layer)
-
 def main():
+    reciprocal_width = 1 / np.array(list_width_hidden_layer)
+    
     x = torch.from_numpy(np.random.rand(num_inputs)).type(torch.FloatTensor).to(device)
     
     list_k_l_numerical = np.zeros((len(list_width_hidden_layer), num_layers))
@@ -100,7 +100,12 @@ def main():
     plt.xlabel(f'1/n')
     plt.ylabel(r'$K^{(L)}$')
     plt.title(r'Last-Layer Observable K as a Function of Inverse Network Size')
-    plt.savefig("Data/ndependence_K_1input.png", dpi=300, bbox_inches='tight')
+    
+    fig_path = "Data/ndependence_K_1input.png"
+
+    # Create the directory if it doesn't exist
+    os.makedirs(os.path.dirname(fig_path), exist_ok=True)  
+    plt.savefig(fig_path, dpi=300, bbox_inches='tight')
     plt.show()
     
 
