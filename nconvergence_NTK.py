@@ -39,7 +39,7 @@ num_layers = 2
 
 scale_learning_rate_tensor = False
 
-num_networks_ensemble = 50  # 50 will take about an hour
+num_networks_ensemble = 10  # 50 will take about an hour on GPU
 
 num_train_steps = 1000 
 epsilon = 1e-5

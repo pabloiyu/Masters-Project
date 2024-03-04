@@ -22,14 +22,14 @@ from utils.helper_computation import *
 from utils.helper_theory import *
 
 ######################### Hyperparameters #########################
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = 'cpu'
 use_identity_activation = False
 Cw = 2
 Cb = 0
 
 num_inputs = 100
 width_hidden_layer = 100
-num_networks_ensemble = int(1E3)
+num_networks_ensemble = int(1e5)
 num_layers = 4
 ###################################################################
 
@@ -63,7 +63,7 @@ def main():
     print("\n####################### Theoretical Results #######################", "\n")
     
     x = x.cpu().numpy()
-    list_k0, list_k1, list_V = compute_KV_1input(x, num_inputs, width_hidden_layer, num_layers, Cb, Cw)
+    list_k0, list_k1, list_V = compute_KV_1input(x, num_inputs, width_hidden_layer, num_layers, Cb, Cw, use_identity_activation)
     
     # We have to divide K_1 and V by the width of the hidden layer as these theoretical equations
     # describe their vl

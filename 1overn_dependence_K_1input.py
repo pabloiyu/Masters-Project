@@ -1,6 +1,8 @@
 """
-Computes and compares experimental and theoretical values for K in the case where 
-we have one input vector. ¡
+The computational value for K approximates both the leading order term and O(1/n^p) 
+corrections. To differentiate these contributions, we calculate K for various values
+of n and plot K against 1/n. Fitting a straight line to this plot yields the leading
+order coefficient (K_0) as the intercept and the O(1/n) contribution (K_1) as the slope.
 
 **Usage:**
 
@@ -23,14 +25,14 @@ from utils.helper_computation import *
 from utils.helper_theory import *
 
 ######################### Hyperparameters #########################
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = 'cpu'
 use_identity_activation = False
 Cw = 2
 Cb = 0
 
 num_inputs = 10
 list_width_hidden_layer = [10, 20, 40, 60, 80, 100, 150, 200] 
-num_networks_ensemble = int(1E3) 
+num_networks_ensemble = int(2e4) 
 num_layers = 3
 ###################################################################
 
@@ -69,7 +71,7 @@ def main():
     y_fit = linear_fit(x_fit, *popt)    
     
     x = x.cpu().numpy()
-    list_k0, list_k1, list_V = compute_KV_1input(x, num_inputs, width_hidden_layer, num_layers, Cb, Cw)
+    list_k0, list_k1, list_V = compute_KV_1input(x, num_inputs, width_hidden_layer, num_layers, Cb, Cw, use_identity_activation)
     
     print("\n   k = k0 + k1/n \nThe intercept corresponds to k0 and the slope corresponds to k1.")
     
@@ -83,15 +85,6 @@ def main():
     print(f"Intercept: {list_k0[-1]:.6f}")
     print(f"Slope:     {list_k1[-1]:.6f}")
     print("\n")
-    
-    num_lines = 300
-
-    for i in range(num_lines):
-        slope = popt[0] + np.sqrt(pcov[0,0]) * (2*np.random.rand() - 1)
-        intercept = popt[1] + np.sqrt(pcov[1,1]) * (2*np.random.rand() - 1)
-        y_line = slope * x_fit + intercept
-        alpha = 0.03
-        plt.plot(x_fit, y_line, color='g', alpha=alpha)
     
     plt.errorbar(reciprocal_width, list_k_l_numerical[:,-1], yerr=list_ste_k_l_numerical[:,-1], fmt='.')
     plt.plot(x_fit, y_fit, linestyle='--', color='g', label="Computational Prediction")

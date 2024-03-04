@@ -1,6 +1,6 @@
 """
-Computes and compares experimental and theoretical values for K in the case where 
-we two input vectors.
+Computes and compares theoretical and computational values for the observable K 
+in the case where we have 2 input vectors.
 
 **Usage:**
 
@@ -22,33 +22,33 @@ from utils.helper_computation import *
 from utils.helper_theory import *
 from utils.helper_parse_ct_data import parse_ct_data
 
-script_dir = os.path.dirname(__file__)  
-path_to_ct_data = 'utils/ct_data.npz'
-file_path = os.path.join(script_dir, path_to_ct_data) 
-
-# Obtain data
-X_train, X_val, X_test, y_train, y_val, y_test = parse_ct_data(file_path)
-
 ######################### Hyperparameters #########################
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = 'cpu'
 use_identity_activation = False
 Cw = 2
 Cb = 0
 
 width_hidden_layer = 100
-num_networks_ensemble = int(1E4)
+num_networks_ensemble = int(1e5)
 ###################################################################
 
-# The code is intended for obtaining observable K for two input data points and for a network
-# with a single hidden layer. 
-num_data_points = 2
-num_layers = 2
-
-X_reduced = X_train[:num_data_points]
-num_inputs = X_train.shape[1]
-
 def main(): 
-    array_phi_x1 = np.zeros((num_networks_ensemble*width_hidden_layer, num_layers))
+    script_dir = os.path.dirname(__file__)  
+    path_to_ct_data = 'utils/ct_data.npz'
+    file_path = os.path.join(script_dir, path_to_ct_data) 
+
+    # Obtain data
+    X_train, X_val, X_test, y_train, y_val, y_test = parse_ct_data(file_path)
+
+    # The code is intended for obtaining observable K for two input data points and for a network
+    # with a single hidden layer. 
+    num_data_points = 2
+    num_layers = 2
+
+    X_reduced = X_train[:num_data_points]
+    num_inputs = X_train.shape[1]
+    
+    array_phi_x1 = np.zeros((num_networks_ensemble, num_layers))
     array_phi_x2 = np.zeros_like(array_phi_x1)
     
     x1 = torch.tensor(X_reduced[0], dtype=torch.float).to(device)
@@ -58,10 +58,10 @@ def main():
     print("\nObtaining computational results...\n")
     
     for n in tqdm(range(num_networks_ensemble)):
-        array_phi_x1[n*width_hidden_layer:(n+1)*width_hidden_layer], array_phi_x2[n*width_hidden_layer:(n+1)*width_hidden_layer] = obtain_neuron_activation_all_layers_two_inputs(num_inputs, width_hidden_layer, x1, x2, num_layers, Cw, use_identity_activation, device)
+        array_phi_x1[n], array_phi_x2[n] = obtain_neuron_activation_all_layers_two_inputs(num_inputs, width_hidden_layer, x1, x2, num_layers, Cw, use_identity_activation, device)
     
     # Now we calculate array_phi for the hidden layer
-    array_phi_2d_hiddenlayer = np.zeros((num_networks_ensemble*width_hidden_layer, num_data_points, num_data_points))
+    array_phi_2d_hiddenlayer = np.zeros((num_networks_ensemble, num_data_points, num_data_points))
     array_phi_2d_hiddenlayer[:,0,0] = array_phi_x1[:,0] ** 2
     array_phi_2d_hiddenlayer[:,1,1] = array_phi_x2[:,0] ** 2
     array_phi_2d_hiddenlayer[:,0,1] = array_phi_x1[:,0] * array_phi_x2[:,0]
@@ -75,7 +75,7 @@ def main():
     array_phi_2d_output[:,1,0] = array_phi_x2[:,1] * array_phi_x1[:,1]
     
     k_l_numerical_hiddenlayer = np.mean(array_phi_2d_hiddenlayer, axis=0)
-    std_k_l_numerical_hiddenlayer = np.sqrt(np.var(array_phi_2d_hiddenlayer, axis=0)) / np.sqrt(num_networks_ensemble*width_hidden_layer)
+    std_k_l_numerical_hiddenlayer = np.sqrt(np.var(array_phi_2d_hiddenlayer, axis=0)) / np.sqrt(num_networks_ensemble)
     
     k_l_numerical_output = np.mean(array_phi_2d_output, axis=0)
     std_k_l_numerical_output = np.sqrt(np.var(array_phi_2d_output, axis=0)) / np.sqrt(num_networks_ensemble)

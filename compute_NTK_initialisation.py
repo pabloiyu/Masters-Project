@@ -5,7 +5,7 @@ initialisation.
 **Usage:**
 
 ```bash 
-python compute_NTK.py 
+python compute_NTK_initialisation.py 
 
 """
 
@@ -24,8 +24,8 @@ from utils.helper_theory import *
 from utils.helper_parse_ct_data import parse_ct_data
 
 ######################### Hyperparameters #########################
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-use_identity_activation = False
+device = 'cpu'
+use_identity_activation = True
 Cw = 2
 Cb = 0
 
@@ -35,7 +35,7 @@ num_layers = 2
 
 scale_learning_rate_tensor = True
 
-num_networks_ensemble = 1000
+num_networks_ensemble = int(1e4)
 ###################################################################
 
 def main():
@@ -63,13 +63,12 @@ def main():
     X_reduced = X_train[:num_data_points]
     num_inputs = X_reduced.shape[1]
 
+    print("\nObtaining computational results for the Neural Tangent Kernel...\n")
+
     # Let's obtain H0_calc with error bars
     array_H0_calc = torch.zeros((num_networks_ensemble, num_data_points, num_data_points)).to(device)
     for m in tqdm(range(num_networks_ensemble)):
-        model = initiate_model(num_inputs, width_hidden_layer, num_layers, Cw, use_identity_activation, device)
-        if m==0:
-            print(model)
-            print("\nObtaining computational results for the Neural Tangent Kernel...\n")
+        model = initiate_model(num_inputs, width_hidden_layer, num_layers, Cw, use_identity_activation, device)            
         
         lambda_matrix_diagonal, num_params = get_lambda_matrix_diagonal(lambda_w_inputs, lambda_w_hidden_layer, lambda_b, num_inputs, width_hidden_layer, num_layers)
 
@@ -79,11 +78,11 @@ def main():
     std_H0_calc = torch.sqrt(torch.var(array_H0_calc, axis=0)/num_networks_ensemble)
 
     print("\n####################### Computational Results #######################")
-    print("\n Neural Tangent Kernel at Last Layer \n", mean_H0_calc, "\n\nStandard Error\n", std_H0_calc.cpu().numpy(), "\n\n")
+    print("\n Neural Tangent Kernel at Last Layer \n", mean_H0_calc.cpu().numpy(), "\n\nStandard Error\n", std_H0_calc.cpu().numpy(), "\n\n")
     
     print("####################### Theoretical Results #######################", "\n")
 
-    H_2 = compute_theoretical_prediction_NTK_initialisation(X_reduced.cpu().numpy(), num_inputs, width_hidden_layer, lambda_w_inputs, lambda_w_hidden_layer, lambda_b, Cb, Cw,  use_identity_activation=False)
+    H_2 = compute_theoretical_prediction_NTK_initialisation(X_reduced.cpu().numpy(), num_inputs, width_hidden_layer, lambda_w_inputs, lambda_w_hidden_layer, lambda_b, Cb, Cw,  use_identity_activation)
     print("Neural Tangent Kernel at Last Layer:\n", H_2, "\n")
 
 if __name__ == "__main__":

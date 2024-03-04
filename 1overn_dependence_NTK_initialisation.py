@@ -26,7 +26,7 @@ from utils.helper_theory import *
 from utils.helper_parse_ct_data import parse_ct_data
 
 ######################### Hyperparameters #########################
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = 'cpu'
 use_identity_activation = False
 Cw = 2
 Cb = 0
@@ -37,11 +37,9 @@ num_inputs = 10
 num_data_points = 2
 
 list_width_hidden_layer = [10, 20, 40, 60, 80, 100, 150, 200] 
-num_networks_ensemble = int(1E2) 
+num_networks_ensemble = int(5E3) 
 num_layers = 2
 ###################################################################
-
-
 
 def main():
     #  Scale learning rate tensor appropriately
@@ -75,7 +73,7 @@ def main():
     print("\nComputing theoretical prediction for the NTK at initialisation ...")
     
     # We now compute the expected theoretical result for the NTK.
-    H_2_theoretical = compute_theoretical_prediction_NTK_initialisation(X.cpu().numpy(), num_inputs, width_hidden_layer, lambda_w_inputs, lambda_w_hidden_layer, lambda_b, Cb, Cw,  use_identity_activation=False)
+    H_2_theoretical = compute_theoretical_prediction_NTK_initialisation(X.cpu().numpy(), num_inputs, width_hidden_layer, lambda_w_inputs, lambda_w_hidden_layer, lambda_b, Cb, Cw,  use_identity_activation)
     
     # Define linear fit 
     def linear_fit(x, a, b):

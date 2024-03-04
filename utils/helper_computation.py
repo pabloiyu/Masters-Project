@@ -261,15 +261,15 @@ def obtain_neuron_activation_all_layers_one_input(num_inputs, width_hidden_layer
     
     model(x)
     
-    average_ith_activation_different_layers = np.zeros(num_layers)
+    ith_activation_different_layers = np.zeros(num_layers)
     for m,list_ith_activation in enumerate(features.values()):
         average_list_ith_activation = list_ith_activation.cpu().numpy()[0] # np.array(list_ith_activation)
-        average_ith_activation_different_layers[m] = average_list_ith_activation
+        ith_activation_different_layers[m] = average_list_ith_activation
         
-    return average_ith_activation_different_layers
+    return ith_activation_different_layers
 
 # I want mean value of ith neuron over the whole last layer.
-def obtain_neuron_activation_all_layers_two_inputs(num_inputs, width_hidden_layer, x1, x2, num_layers, Cw=1, use_identity_activation=False, device='cpu'):
+def obtain_neuron_activation_all_layers_two_inputs_OLD(num_inputs, width_hidden_layer, x1, x2, num_layers, Cw=1, use_identity_activation=False, device='cpu'):
     features = {}
     def get_features(name):
         def hook(model, input, output):
@@ -305,3 +305,40 @@ def obtain_neuron_activation_all_layers_two_inputs(num_inputs, width_hidden_laye
         list_ith_activation_different_layers_x2[:, m] = list_ith_activation
     
     return list_ith_activation_different_layers_x1, list_ith_activation_different_layers_x2
+
+def obtain_neuron_activation_all_layers_two_inputs(num_inputs, width_hidden_layer, x1, x2, num_layers, Cw=1, use_identity_activation=False, device='cpu'):
+    features = {}
+    def get_features(name):
+        def hook(model, input, output):
+            features[name] = output.detach()
+        return hook
+    
+    model = NeuralNetwork(num_inputs, width_hidden_layer, num_layers, use_identity_activation).to(device)
+    
+    for layer_num,layer in enumerate(model.linear_tanh_stack):
+        if isinstance(layer, nn.Linear):
+            layer_weight = layer.weight.data
+            num_input_neurons = layer_weight.shape[1]
+            num_output_neurons = layer_weight.shape[0]
+
+            variance = Cw / (num_input_neurons)
+            nn.init.normal_(layer.weight, mean=0, std=np.sqrt(variance))
+            nn.init.zeros_(layer.bias)
+            
+            layer.register_forward_hook(get_features(f"{layer_num}"))
+            
+    model(x1)
+    
+    ith_activation_different_layers_x1 = np.zeros(num_layers)
+    for m,list_ith_activation in enumerate(features.values()):
+        list_ith_activation = list_ith_activation.cpu().numpy()[0]
+        ith_activation_different_layers_x1[m] = list_ith_activation
+        
+    model(x2)
+    
+    ith_activation_different_layers_x2 = np.zeros(num_layers)
+    for m,list_ith_activation in enumerate(features.values()):
+        list_ith_activation = list_ith_activation.cpu().numpy()[0]
+        ith_activation_different_layers_x2[m] = list_ith_activation
+    
+    return ith_activation_different_layers_x1, ith_activation_different_layers_x2
