@@ -40,7 +40,7 @@ num_networks_ensemble = int(1e4)
 
 def main():
     script_dir = os.path.dirname(__file__)  
-    path_to_ct_data = 'utils/ct_data.npz'
+    path_to_ct_data = 'utils/slice_localization_data.csv'
     file_path = os.path.join(script_dir, path_to_ct_data) 
 
     # Obtain data

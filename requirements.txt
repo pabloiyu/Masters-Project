@@ -1,9 +1,4 @@
-Hi Anthony,
-
-I really enjoyed the previous technical interview as the role seemed like a really good fit. I was wondering if there were any updates and what the next steps would be.
-
-Looking forward to hearing from you.
-
-Best wishes, 
-
-Pablo
+torch
+numpy
+matplotlib
+tqdm
