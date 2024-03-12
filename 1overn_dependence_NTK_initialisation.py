@@ -37,7 +37,7 @@ num_inputs = 10
 num_data_points = 2
 
 list_width_hidden_layer = [10, 20, 40, 60, 80, 100, 150, 200] 
-num_networks_ensemble = int(5E3) 
+num_networks_ensemble = int(1e5) 
 num_layers = 2
 ###################################################################
 
@@ -80,7 +80,7 @@ def main():
         return a * x + b
     
     fig, axs = plt.subplots(num_data_points, num_data_points, figsize=(18, 13))
-    fig.suptitle('Last-Layer Observable NTK as a Function of Inverse Network Size')
+    fig.suptitle('Last-Layer Observable NTK as a Function of Inverse Network Size', fontsize=17)
     fig.subplots_adjust(hspace=.21*num_data_points/2, top=0.92)
     
     # We now perform the fit for every element of the NTK. We will plot and save a graph for each.
@@ -102,21 +102,22 @@ def main():
             print(f"\n####################### Theoretical Results | Element ({i},{j}) #######################", "\n")
             
             print(f"Intercept: {H_2_theoretical[i,j]:.6f}")
-            print(f"Slope:      NA")
+            print(f"Slope:     0")
             print("\n")
             
             axs[i,j].errorbar(reciprocal_width, average_NTK_numerical[:,i,j], yerr=ste_NTK_numerical[:,i,j], fmt='.')
             axs[i,j].plot(x_fit, y_fit, linestyle='--', color='g', label="Computational Prediction")
-            axs[i,j].legend()
-            axs[i,j].set_xlabel(f'1/n')
-            axs[i,j].set_ylabel(f'Neural Tangent Kernel')
-            axs[i,j].set_title(f'Element ({i},{j})')
+            axs[i,j].legend(fontsize=13)
+            axs[i,j].set_xlabel(f'1/n', fontsize=14)
+            axs[i,j].set_ylabel(f'Neural Tangent Kernel', fontsize=14)
+            axs[i,j].set_title(f'Element ({i},{j})', fontsize=16)
             
     fig_path = "Data/1overn_dependence_NTK_initialisation.png"  
 
     # Create the directory if it doesn't exist
     os.makedirs(os.path.dirname(fig_path), exist_ok=True)  
     fig.savefig(fig_path, dpi=300, bbox_inches='tight')
+    print("\nFigure was saved to the Data folder.\n")
     plt.show()
                 
 

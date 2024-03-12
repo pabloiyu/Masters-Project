@@ -181,6 +181,8 @@ def get_critical_learning_rate(H):
 
     return critical_learning_rate
     
+def probability_distribution_phi(x, K, V):
+    return np.exp(-x**2/(2*K) - V*x**4/8)
 
 def main():
     # Let's define a simple function and check if the expectation_gaussian_measure works

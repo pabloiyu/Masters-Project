@@ -49,7 +49,7 @@ def main():
 
         print(f"\nStarting experiments for width_hidden_layer = {width_hidden_layer} ...")
         for n in tqdm(range(num_networks_ensemble)): 
-            array_phi[n] = obtain_neuron_activation_all_layers_one_input(num_inputs, width_hidden_layer, num_layers, x, Cw, use_identity_activation, device)
+            array_phi[n], _ = obtain_neuron_activation_all_layers_one_input(num_inputs, width_hidden_layer, num_layers, x, Cw, use_identity_activation, device)
         
         array_phi_pow2 = array_phi**2
 
@@ -87,8 +87,8 @@ def main():
     print("\n")
     
     plt.errorbar(reciprocal_width, list_k_l_numerical[:,-1], yerr=list_ste_k_l_numerical[:,-1], fmt='.')
-    plt.plot(x_fit, y_fit, linestyle='--', color='g', label="Computational Prediction")
-    plt.plot(x_fit, linear_fit(x_fit, list_k1[-1], list_k0[-1]), linestyle='--', color='r', label="Theoretical Prediction")
+    plt.plot(x_fit, y_fit, linestyle='--', color='g', label="Computational Fit")
+    plt.plot(x_fit, linear_fit(x_fit, list_k1[-1], list_k0[-1]), linestyle='--', color='r', label="Theoretical Fit")
     plt.legend()
     plt.xlabel(f'1/n')
     plt.ylabel(r'$K^{(L)}$')
@@ -99,6 +99,7 @@ def main():
     # Create the directory if it doesn't exist
     os.makedirs(os.path.dirname(fig_path), exist_ok=True)  
     plt.savefig(fig_path, dpi=300, bbox_inches='tight')
+    print("\nFigure was saved to the Data folder.\n")
     plt.show()
     
 
