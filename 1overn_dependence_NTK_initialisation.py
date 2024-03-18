@@ -36,19 +36,28 @@ scale_learning_rate_tensor = True
 num_inputs = 10
 num_data_points = 2
 
-list_width_hidden_layer = [10, 20, 40, 60, 80, 100, 150, 200] 
-num_networks_ensemble = int(1e5) 
+list_width_hidden_layer = [20, 40, 60, 80, 100, 150, 200] 
+num_networks_ensemble = int(5e4) 
 num_layers = 2
 ###################################################################
 
 def main():
+    script_dir = os.path.dirname(__file__)  
+    path_to_ct_data = 'utils/slice_localization_data.csv'
+    file_path = os.path.join(script_dir, path_to_ct_data) 
+
+    # Obtain data
+    X_train, _, _, _, _, _ = parse_ct_data(file_path)
+    num_inputs = X_train.shape[1]
+    X_train = torch.from_numpy(X_train).float().to(device)
+    
     #  Scale learning rate tensor appropriately
     lambda_w_inputs = 1 / num_inputs if scale_learning_rate_tensor else 1
     lambda_b = 1
 
     reciprocal_width = 1 / np.array(list_width_hidden_layer)
-
-    X = torch.from_numpy(np.random.rand(num_data_points, num_inputs)).type(torch.FloatTensor).to(device)
+    
+    X = X_train[:num_data_points]
     
     # We only store the NTK at the singular output neuron. For each network in the ensemble, and for each width,
     # we will store the NTK at the singular output neuron.
@@ -106,7 +115,8 @@ def main():
             print("\n")
             
             axs[i,j].errorbar(reciprocal_width, average_NTK_numerical[:,i,j], yerr=ste_NTK_numerical[:,i,j], fmt='.')
-            axs[i,j].plot(x_fit, y_fit, linestyle='--', color='g', label="Computational Prediction")
+            axs[i,j].plot(x_fit, y_fit, linestyle='--', color='g', label="Computational Fit")
+            axs[i,j].plot(x_fit, linear_fit(x_fit, 0, H_2_theoretical[i,j]), linestyle='--', color='r', label="Theoretical Fit")
             axs[i,j].legend(fontsize=13)
             axs[i,j].set_xlabel(f'1/n', fontsize=14)
             axs[i,j].set_ylabel(f'Neural Tangent Kernel', fontsize=14)

@@ -30,12 +30,12 @@ Cw = 2
 Cb = 0
 
 num_data_points = 2
-width_hidden_layer = 100
+width_hidden_layer = 200
 num_layers = 2
 
-scale_learning_rate_tensor = True
+scale_learning_rate_tensor = False
 
-num_networks_ensemble = int(1e4)
+num_networks_ensemble = int(1e5)
 ###################################################################
 
 def main():
@@ -44,24 +44,17 @@ def main():
     file_path = os.path.join(script_dir, path_to_ct_data) 
 
     # Obtain data
-    X_train, X_val, X_test, y_train, y_val, y_test = parse_ct_data(file_path)
+    X_train, _, _, _, _, _ = parse_ct_data(file_path)
     num_inputs = X_train.shape[1]
+    X_train = torch.from_numpy(X_train).float().to(device)
 
     #  Scale learning rate tensor appropriately
     lambda_w_inputs = 1 / num_inputs if scale_learning_rate_tensor else 1
     lambda_w_hidden_layer = 1 / width_hidden_layer if scale_learning_rate_tensor else 1
     lambda_b = 1
-
-    # Convert to Torch tensors
-    X_train = torch.from_numpy(X_train).float().to(device)
-    X_val = torch.from_numpy(X_val).float().to(device)
-    X_test = torch.from_numpy(X_test).float().to(device)
-    y_train = torch.from_numpy(y_train).float().to(device)
-    y_val = torch.from_numpy(y_val).float().to(device)
-    y_test = torch.from_numpy(y_test).float().to(device)
-
+    
+    # Define a reduced dataset
     X_reduced = X_train[:num_data_points]
-    num_inputs = X_reduced.shape[1]
 
     print("\nObtaining computational results for the Neural Tangent Kernel...\n")
 

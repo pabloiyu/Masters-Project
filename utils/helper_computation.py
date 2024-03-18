@@ -278,6 +278,6 @@ def obtain_neuron_activation_all_layers_two_inputs(num_inputs, width_hidden_laye
     # We go through the model layers one by one
     for m,list_all_activations_x2 in enumerate(features.values()):
         list_all_activations_x2 = list_all_activations_x2.cpu().numpy()
-        ith_activation_different_layers_x1[m] = list_all_activations_x2[0]
+        ith_activation_different_layers_x2[m] = list_all_activations_x2[0]
     
     return ith_activation_different_layers_x1, ith_activation_different_layers_x2

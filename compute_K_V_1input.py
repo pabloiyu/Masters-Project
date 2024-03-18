@@ -29,9 +29,9 @@ use_identity_activation = False
 Cw = 2
 Cb = 0
 
-num_inputs = 20
-width_hidden_layer = 20
-num_networks_ensemble = int(1e5)
+num_inputs = 100
+width_hidden_layer = 100
+num_networks_ensemble = int(2e6)
 num_layers = 5
 ###################################################################
 
@@ -122,7 +122,7 @@ def main():
     # We plot the histograms of the activation of the neurons in the hidden layers and the output layer
     fig, axs = plt.subplots(2, (num_layers)//2, figsize=(20,13))
     
-    fig.suptitle('Neuron Activation Distributions Across Hidden Layers', fontsize=17)
+    fig.suptitle('Pre-Activation Distributions Across Hidden Layers', fontsize=17)
     fig.subplots_adjust(hspace=.21, top=0.93)
     
     for l in range(num_layers-1):
@@ -146,13 +146,13 @@ def main():
         
         axs[i,j].hist(array_phi_all_activations_hiddenlayers[:,l], bins=300, density=True)
         axs[i,j].legend(fontsize=13)
-        axs[i,j].set_xlabel('Neuron Activation', fontsize=14)
+        axs[i,j].set_xlabel('Pre-Activation Values', fontsize=14)
         axs[i,j].set_ylabel('Probability Density', fontsize=14)
         axs[i,j].set_title(f"Hidden Layer {l+1}", fontsize=16)
         
         axs[i,j].tick_params(axis='both', labelsize=12)
     
-    fig_path = f"Data/histograms_neuron_activation_{width_hidden_layer}neurons_wide.png"  
+    fig_path = f"Data/histograms_neuron_activation_{width_hidden_layer}neurons_wide_{num_networks_ensemble}networks.png"  
 
     # Create the directory if it doesn't exist
     os.makedirs(os.path.dirname(fig_path), exist_ok=True)  

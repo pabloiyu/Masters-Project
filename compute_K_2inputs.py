@@ -28,8 +28,8 @@ use_identity_activation = False
 Cw = 2
 Cb = 0
 
-width_hidden_layer = 100
-num_networks_ensemble = int(1e5)
+width_hidden_layer = 10
+num_networks_ensemble = int(2e6)
 ###################################################################
 
 def main(): 
