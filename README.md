@@ -1,6 +1,6 @@
 # Masters-Project
 
-## Towards an Effective Theory of Machine Learning
+## Effective Theory Approach to Understanding Ensembles of Artificial Neural Networks
 
 ## Setup
 
