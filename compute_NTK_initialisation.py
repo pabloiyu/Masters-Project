@@ -25,15 +25,15 @@ from utils.helper_parse_ct_data import parse_ct_data
 
 ######################### Hyperparameters #########################
 device = 'cpu'
-use_identity_activation = True
+use_identity_activation = False
 Cw = 2
 Cb = 0
 
 num_data_points = 2
-width_hidden_layer = 200
-num_layers = 2
+width_hidden_layer = 100
+num_layers = 5
 
-scale_learning_rate_tensor = False
+scale_learning_rate_tensor = True
 
 num_networks_ensemble = int(1e5)
 ###################################################################

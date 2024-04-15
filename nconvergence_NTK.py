@@ -34,15 +34,15 @@ Cw = 2
 Cb = 0
 
 num_data_points = 2
-list_width_hidden_layer = [64, 128, 256, 512, 1024, 2048, 4096]
-num_layers = 2
+list_width_hidden_layer = [64, 128, 256, 512, 1024]#, 2048, 4096]
+num_layers = 4
 
-scale_learning_rate_tensor = False
+scale_learning_rate_tensor = True
 
-num_networks_ensemble = 10  # 50 will take about an hour on GPU
+num_networks_ensemble = 2 
 
 num_train_steps = 1000 
-epsilon = 1e-5
+epsilon = 1e-3
 delay_train_steps = 20
 ###################################################################
 
@@ -145,15 +145,15 @@ def main():
 
     # Plot the error bars
     ax.errorbar(list_width_hidden_layer, average_sup_time_evol_NTK, yerr=ste_sup_time_evol_NTK, fmt='.')
-    ax.plot(2**x_fit, 2**y_fit, label=f'Linear fit α {popt[0]:.3f}n', linestyle='--', color='r')
+    ax.plot(2**x_fit, 2**y_fit, label=rf'Power law fit α ({popt[0]:.3f} ± {std_slope:.3f})n', linestyle='--', color='r')
     set_log2_scale(ax)
 
     plt.legend()
     plt.xlabel("Width of Hidden Layer")
     plt.ylabel(r"Supremum $||H_t - H_0||_F$")
-    plt.title("Neural Tangent Kernel Evolution in Training")
+    plt.title("Training Evolution of the Neural Tangent Kernel")
 
-    fig_path = "Data/evolution_NTK_normalized_x.png"
+    fig_path = f"Data/training_evolution_NTK_normalized_x_{num_networks_ensemble}trials_{num_layers}layers.png"
 
     # Create the directory if it doesn't exist
     os.makedirs(os.path.dirname(fig_path), exist_ok=True) 

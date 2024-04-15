@@ -3,6 +3,7 @@ from torch import nn
 import torch.nn.functional as F
 import numpy as np
 import time
+from tqdm import tqdm
 
 class NeuralNetwork(nn.Module):
     """
@@ -281,3 +282,58 @@ def obtain_neuron_activation_all_layers_two_inputs(num_inputs, width_hidden_laye
         ith_activation_different_layers_x2[m] = list_all_activations_x2[0]
     
     return ith_activation_different_layers_x1, ith_activation_different_layers_x2
+
+
+# num_inputs, width_hidden_layer, num_layers, x, Cw=1, use_identity_activation=False, device='cpu'
+def obtain_neuron_activation_all_layers_one_input_numpy(num_inputs, width_hidden_layer, num_layers, num_networks, 
+                                                        x, Cw, Cb, use_identity_activation=False, device='cpu', size_output=1):
+    """
+    Performs forward passes of the neural network ensemble in parallel using Numpy. 
+    """
+    array_phi_all_activations_hiddenlayers = np.zeros((num_networks, width_hidden_layer, num_layers-1))
+    array_phi_all_activations_output       = np.zeros((num_networks, size_output))
+    
+    # nets_compute_in_parallel is the number of networks that we can compute in parallel in Numpy. 
+    # The chosen value 2e4 should run on most computers. If you have access to a computer with large
+    # amounts of RAM, this value can be increased.
+    nets_compute_in_parallel = int(2e4)
+    n_multiples = int((num_networks-1) // nets_compute_in_parallel)
+    
+    for n in range(n_multiples+1):
+        n_nets_start_idx = int(n*nets_compute_in_parallel)
+        tqdm.write(f"Iteration {n_nets_start_idx} / {num_networks}") 
+        
+        # Correctly handles cases where the number of networks is not a multiple of nets_compute_in_parallel
+        if n == n_multiples:
+            nets_compute_in_parallel = num_networks - n_nets_start_idx
+            n_nets_end_idx = int(num_networks)
+        else:   
+            n_nets_end_idx = int((n+1)*nets_compute_in_parallel)
+                
+        # Compute first layer
+        var_weights = Cw / (num_inputs)
+        w_j = np.random.normal(size=(nets_compute_in_parallel, width_hidden_layer, num_inputs), scale=np.sqrt(var_weights)).astype(np.float32)
+        b_j = np.random.normal(size=(nets_compute_in_parallel, width_hidden_layer), scale=np.sqrt(Cb)).astype(np.float32)
+        phi_j = (np.einsum("mij, j -> mi", w_j, x) + b_j).astype(np.float32)
+        phi_j_nonlinear = np.tanh(phi_j).astype(np.float32)
+        
+        array_phi_all_activations_hiddenlayers[n_nets_start_idx:n_nets_end_idx, :, 0] = phi_j
+        
+        # Compute intermediate hidden layers
+        var_weights = Cw / width_hidden_layer
+        for l in range(num_layers - 2):
+            w_j = np.random.normal(size=(nets_compute_in_parallel, width_hidden_layer, width_hidden_layer), scale=np.sqrt(var_weights)).astype(np.float32)
+            b_j = np.random.normal(size=(nets_compute_in_parallel, width_hidden_layer), scale=np.sqrt(Cb)).astype(np.float32)
+            phi_j = (np.einsum("mij, mj -> mi", w_j, phi_j_nonlinear) + b_j).astype(np.float32)
+            phi_j_nonlinear = np.tanh(phi_j).astype(np.float32)
+            
+            array_phi_all_activations_hiddenlayers[n_nets_start_idx:n_nets_end_idx, :, l+1] = phi_j
+            
+        # Compute output layer
+        w_j = np.random.normal(size=(nets_compute_in_parallel, size_output, width_hidden_layer), scale=np.sqrt(var_weights)).astype(np.float32)
+        b_j = np.random.normal(size=(nets_compute_in_parallel, size_output), scale=np.sqrt(Cb)).astype(np.float32)
+        phi_j = (np.einsum("mij, mj -> mi", w_j, phi_j_nonlinear) + b_j).astype(np.float32)
+        
+        array_phi_all_activations_output[n_nets_start_idx:n_nets_end_idx, :] = phi_j
+    
+    return array_phi_all_activations_hiddenlayers, array_phi_all_activations_output

@@ -31,8 +31,10 @@ Cb = 0
 
 num_inputs = 100
 width_hidden_layer = 100
-num_networks_ensemble = int(2e6)
-num_layers = 5
+num_networks_ensemble = int(4e4)
+num_layers = 4
+
+use_numpy_implementation = True
 ###################################################################
 
 def main():
@@ -40,18 +42,32 @@ def main():
     # From each network in the ensemble, and at each layer, we store the activation of a single neuron
     array_phi = np.zeros((num_networks_ensemble, num_layers))
     
-    # We save the activation of all neurons in the hidden layers and the output layer 
-    array_phi_all_activations_hiddenlayers = np.zeros((num_networks_ensemble*width_hidden_layer, num_layers-1))
-    array_phi_all_activations_output = np.zeros((num_networks_ensemble, 1))
+    if use_numpy_implementation:
+        print("\nUsing Numpy Implementation...\n")
+        array_phi_all_activations_hiddenlayers, array_phi_all_activations_output = obtain_neuron_activation_all_layers_one_input_numpy(num_inputs, width_hidden_layer, num_layers, num_networks_ensemble, x.numpy(), Cw, Cb, use_identity_activation=False, device='cpu')
+        # array_phi_all_activations_hiddenlayers.size = (num_networks_ensemble, width_hidden_layer, num_layers-1)
+        # array_phi_all_activations_output.size       = (num_networks_ensemble, 1)
+        
+        # We now pick only the first neuron in each hidden layer
+        array_phi[:, :-1] = array_phi_all_activations_hiddenlayers[:,0,:]
+        array_phi[:, -1] = array_phi_all_activations_output[:, 0]
+        
+        # We now reshape array_phi_all_activations_hiddenlayers to have the shape (num_networks_ensemble*width_hidden_layer, num_layers-1)
+        array_phi_all_activations_hiddenlayers = array_phi_all_activations_hiddenlayers.reshape((num_networks_ensemble*width_hidden_layer, num_layers-1))
+        
+    else:
+        # We save the activation of all neurons in the hidden layers and the output layer 
+        array_phi_all_activations_hiddenlayers = np.zeros((num_networks_ensemble*width_hidden_layer, num_layers-1))
+        array_phi_all_activations_output = np.zeros((num_networks_ensemble, 1))
 
-    print("\nObtaining computational results...\n")
-    for n in tqdm(range(num_networks_ensemble)): 
-        array_phi[n], all_activations_different_layers = obtain_neuron_activation_all_layers_one_input(num_inputs, width_hidden_layer, num_layers, x, Cw, use_identity_activation, device)
+        print("\nObtaining computational results...\n")
+        for n in tqdm(range(num_networks_ensemble)): 
+            array_phi[n], all_activations_different_layers = obtain_neuron_activation_all_layers_one_input(num_inputs, width_hidden_layer, num_layers, x, Cw, use_identity_activation, device)
+            
+            array_phi_all_activations_hiddenlayers[n*width_hidden_layer:(n+1)*width_hidden_layer] = np.array(all_activations_different_layers[:-1]).T
+            array_phi_all_activations_output[n] = all_activations_different_layers[-1]
         
-        array_phi_all_activations_hiddenlayers[n*width_hidden_layer:(n+1)*width_hidden_layer] = np.array(all_activations_different_layers[:-1]).T
-        array_phi_all_activations_output[n] = all_activations_different_layers[-1]
-        
-    # As there is only one output neuron, we can remove the last dimension
+    # As there is only one output neuron, we can remove the last dimension of the output array
     array_phi_all_activations_output.squeeze()
         
     array_phi_pow2 = array_phi**2
@@ -120,13 +136,28 @@ def main():
         print(f"KL Divergence at Hidden Layer {l+1}: {kl_div:.10f}") 
     
     # We plot the histograms of the activation of the neurons in the hidden layers and the output layer
-    fig, axs = plt.subplots(2, (num_layers)//2, figsize=(20,13))
-    
+    # Calculate the number of rows and columns needed
+    num_plots = num_layers - 1
+    num_rows = 1 if num_plots <= 2 else 2
+    num_cols = num_plots if num_plots <= 2 else (num_plots + 1) // 2
+
+    # Create the figure and axes
+    if num_plots == 2:
+        fig, axs = plt.subplots(num_rows, num_cols, figsize=(20, 7))
+    else:
+        fig, axs = plt.subplots(num_rows, num_cols, figsize=(20, 13))
+
+    # Reshape axs to handle all cases
+    axs = axs.ravel() if num_plots > 1 else np.array([axs])
+
     fig.suptitle('Pre-Activation Distributions Across Hidden Layers', fontsize=17)
-    fig.subplots_adjust(hspace=.21, top=0.93)
-    
-    for l in range(num_layers-1):
-        i, j = l//((num_layers)//2), l%((num_layers)//2)
+    fig.subplots_adjust(hspace=.25, top=0.91)
+
+    # Iterate over the layers and plot
+    for l, ax in enumerate(axs):
+        if l >= num_plots:
+            ax.axis('off')
+            continue
 
         x_grid = np.linspace(min(array_phi_all_activations_hiddenlayers[:,l]), max(array_phi_all_activations_hiddenlayers[:,l]), 1000) 
 
@@ -134,7 +165,7 @@ def main():
         theoretical_var = list_k0[l]
         theoretical_pdf = norm(loc=0, scale=np.sqrt(theoretical_var))
         theoretical_pdf_vals = theoretical_pdf.pdf(x_grid)
-        axs[i,j].plot(x_grid, theoretical_pdf_vals, linestyle='--', color='crimson', markersize=0, label='LO Distribution', linewidth=3.5)
+        ax.plot(x_grid, theoretical_pdf_vals, linestyle='--', color='crimson', markersize=0, label='LO Distribution', linewidth=3.5)
         
         # The next to leading order distribution is no longer just a Gaussian as it has a exp(x^4) term
         theoretical_var = list_k0[l] + list_k1[l]/width_hidden_layer
@@ -142,15 +173,15 @@ def main():
         theoretical_pdf_unnormalised = probability_distribution_phi(x_grid, theoretical_var, theoretical_V)
         Z = simpson(theoretical_pdf_unnormalised, x=x_grid)
         theoretical_pdf_vals = theoretical_pdf_unnormalised / Z
-        axs[i,j].plot(x_grid, theoretical_pdf_vals, linestyle='--', color='#EAAA00', markersize=0, label='LO + O(1/n) Distribution', linewidth=3.5)
+        ax.plot(x_grid, theoretical_pdf_vals, linestyle='--', color='#EAAA00', markersize=0, label='LO + O(1/n) Distribution', linewidth=3.5)
         
-        axs[i,j].hist(array_phi_all_activations_hiddenlayers[:,l], bins=300, density=True)
-        axs[i,j].legend(fontsize=13)
-        axs[i,j].set_xlabel('Pre-Activation Values', fontsize=14)
-        axs[i,j].set_ylabel('Probability Density', fontsize=14)
-        axs[i,j].set_title(f"Hidden Layer {l+1}", fontsize=16)
+        ax.hist(array_phi_all_activations_hiddenlayers[:,l], bins=300, density=True)
+        ax.legend(fontsize=13)
+        ax.set_xlabel('Pre-Activation Values', fontsize=14)
+        ax.set_ylabel('Probability Density', fontsize=14)
+        ax.set_title(f"Hidden Layer {l+1}", fontsize=16)
         
-        axs[i,j].tick_params(axis='both', labelsize=12)
+        ax.tick_params(axis='both', labelsize=12)
     
     fig_path = f"Data/histograms_neuron_activation_{width_hidden_layer}neurons_wide_{num_networks_ensemble}networks.png"  
 
