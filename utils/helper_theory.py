@@ -137,31 +137,37 @@ def compute_KV_1input(x, num_inputs, width_hidden_layer, num_layers, Cb, Cw, use
         
     return list_k0, list_k1, list_V
 
-def compute_theoretical_prediction_NTK_initialisation(X, num_inputs, width_hidden_layer, lambda_w_inputs, lambda_w_hidden_layer, lambda_b, Cb, Cw,  use_identity_activation=False):
+def compute_theoretical_prediction_NTK_initialisation(X, num_inputs, width_hidden_layer, num_layers, lambda_w_inputs, lambda_w_hidden_layer, lambda_b, Cb, Cw,  use_identity_activation=False):
     num_data_points = X.shape[0]
     
     dotted_inputs = np.einsum('im,km -> ik', X, X)
     deriv_handler = DerivativesActivationFunction(use_identity_activation)
 
     # X is of size (num_data_points, 384)
-    K_1 = Cb + Cw/num_inputs * dotted_inputs
-    theta_1 = lambda_b + lambda_w_inputs * dotted_inputs  #lambda_b + lambda_w/num_inputs * dotted_inputs 
+    K_i = Cb + Cw/num_inputs * dotted_inputs
+    theta_i = lambda_b + lambda_w_inputs * dotted_inputs  #lambda_b + lambda_w/num_inputs * dotted_inputs 
     
-    if use_identity_activation:
-        H_2 = lambda_b + lambda_w_hidden_layer * K_1 * width_hidden_layer + Cw * theta_1  # lambda_b + lambda_w * K_1 + Cw * theta_1 
+    for _ in range(int(num_layers)-1):
+        if use_identity_activation:
+            theta_i = lambda_b + lambda_w_hidden_layer * K_i * width_hidden_layer + Cw * theta_i  # lambda_b + lambda_w * K_1 + Cw * theta_1 
 
-    else:
-        expectation_func = np.zeros_like(theta_1)
-        expectation_deriv = np.zeros_like(theta_1)
+        else:
+            expectation_func = np.zeros_like(theta_i)
+            expectation_deriv = np.zeros_like(theta_i)
 
+            for i in range(num_data_points):
+                for j in range(num_data_points):
+                    expectation_func[i,j]  = expectation_gaussian_measure_ndim(deriv_handler.f, deriv_handler.f, i, j, K_i)
+                    expectation_deriv[i,j] = expectation_gaussian_measure_ndim(deriv_handler.f_d1, deriv_handler.f_d1, i, j, K_i)
+            
+            theta_i = lambda_b + lambda_w_hidden_layer * expectation_func * width_hidden_layer + Cw * expectation_deriv * theta_i  # lambda_b + lambda_w * expectation_func + Cw * expectation_deriv * theta_1
+            
+        old_K_i = np.copy(K_i)
         for i in range(num_data_points):
             for j in range(num_data_points):
-                expectation_func[i,j]  = expectation_gaussian_measure_ndim(deriv_handler.f, deriv_handler.f, i, j, K_1)
-                expectation_deriv[i,j] = expectation_gaussian_measure_ndim(deriv_handler.f_d1, deriv_handler.f_d1, i, j, K_1)
-        
-        H_2 = lambda_b + lambda_w_hidden_layer * expectation_func * width_hidden_layer + Cw * expectation_deriv * theta_1  # lambda_b + lambda_w * expectation_func + Cw * expectation_deriv * theta_1
-        
-    return H_2
+                K_i[i,j] = Cb + Cw * expectation_gaussian_measure_ndim(deriv_handler.f, deriv_handler.f, i, j, old_K_i)
+            
+    return theta_i
 
 def frobenius_norm(A):
     return torch.sqrt(torch.sum(A**2))

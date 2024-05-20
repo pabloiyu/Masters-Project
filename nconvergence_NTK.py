@@ -35,7 +35,7 @@ Cb = 0
 
 num_data_points = 2
 list_width_hidden_layer = [64, 128, 256, 512, 1024]#, 2048, 4096]
-num_layers = 4
+num_layers = 2
 
 scale_learning_rate_tensor = True
 

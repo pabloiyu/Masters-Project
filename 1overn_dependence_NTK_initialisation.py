@@ -82,7 +82,7 @@ def main():
     print("\nComputing theoretical prediction for the NTK at initialisation ...")
     
     # We now compute the expected theoretical result for the NTK.
-    H_2_theoretical = compute_theoretical_prediction_NTK_initialisation(X.cpu().numpy(), num_inputs, width_hidden_layer, lambda_w_inputs, lambda_w_hidden_layer, lambda_b, Cb, Cw,  use_identity_activation)
+    H_theoretical = compute_theoretical_prediction_NTK_initialisation(X.cpu().numpy(), num_inputs, width_hidden_layer, num_layers, lambda_w_inputs, lambda_w_hidden_layer, lambda_b, Cb, Cw,  use_identity_activation)
     
     # Define linear fit 
     def linear_fit(x, a, b):
@@ -110,13 +110,17 @@ def main():
             
             print(f"\n####################### Theoretical Results | Element ({i},{j}) #######################", "\n")
             
-            print(f"Intercept: {H_2_theoretical[i,j]:.6f}")
-            print(f"Slope:     0")
+            print(f"Intercept: {H_theoretical[i,j]:.6f}")
+            if num_layers == 2:
+                print(f"Slope:     0")
+            else:
+                print(f"Slope:     UNK (not calculated for num_layers > 2)")
+            
             print("\n")
             
             axs[i,j].errorbar(reciprocal_width, average_NTK_numerical[:,i,j], yerr=ste_NTK_numerical[:,i,j], fmt='.')
             axs[i,j].plot(x_fit, y_fit, linestyle='--', color='g', label="Computational Fit")
-            axs[i,j].plot(x_fit, linear_fit(x_fit, 0, H_2_theoretical[i,j]), linestyle='--', color='r', label="Theoretical Fit")
+            axs[i,j].plot(x_fit, linear_fit(x_fit, 0, H_theoretical[i,j]), linestyle='--', color='r', label="Theoretical Fit")
             axs[i,j].legend(fontsize=13)
             axs[i,j].set_xlabel(f'1/n', fontsize=14)
             axs[i,j].set_ylabel(f'Neural Tangent Kernel', fontsize=14)

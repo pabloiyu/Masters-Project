@@ -31,7 +31,7 @@ Cb = 0
 
 num_data_points = 2
 width_hidden_layer = 100
-num_layers = 5
+num_layers = 2
 
 scale_learning_rate_tensor = True
 
@@ -75,8 +75,8 @@ def main():
     
     print("####################### Theoretical Results #######################", "\n")
 
-    H_2 = compute_theoretical_prediction_NTK_initialisation(X_reduced.cpu().numpy(), num_inputs, width_hidden_layer, lambda_w_inputs, lambda_w_hidden_layer, lambda_b, Cb, Cw,  use_identity_activation)
-    print("Neural Tangent Kernel at Last Layer:\n", H_2, "\n")
+    H_theory = compute_theoretical_prediction_NTK_initialisation(X_reduced.cpu().numpy(), num_inputs, width_hidden_layer, num_layers, lambda_w_inputs, lambda_w_hidden_layer, lambda_b, Cb, Cw,  use_identity_activation)
+    print("Neural Tangent Kernel at Last Layer:\n", H_theory, "\n")
 
 if __name__ == "__main__":
     main()
